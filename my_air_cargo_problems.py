@@ -9,6 +9,7 @@ from lp_utils import (
 )
 from my_planning_graph import PlanningGraph
 
+debug=1
 
 class AirCargoProblem(Problem):
     def __init__(self, cargos, planes, airports, initial: FluentState, goal: list):
@@ -32,6 +33,7 @@ class AirCargoProblem(Problem):
         self.planes = planes
         self.airports = airports
         self.actions_list = self.get_actions()
+
 
     def get_actions(self):
         '''
@@ -220,7 +222,25 @@ class AirCargoProblem(Problem):
         executed.
         '''
         # TODO implement (see Russell-Norvig Ed-3 10.2.3  or Russell-Norvig Ed-2 11.2)
-        count = 0
+
+        #assuming that (1) there may not be two actions, each of which deletes
+        #the goal literal achieved by the other, and (2) some action may not achieve multiple goals
+        #Russell-Norvig Ed-3 10.2.3  or Russell-Norvig Ed-2 11.2 says the minimum number of actions is
+        #exactly the number of unsatisfied goals.
+        #Our problems satisfies that.
+
+        #decode the T/F (true/false) string into its corresponding list of positive and negative fluents
+        state_obj=decode_state(node.state, self.state_map)
+        pos_list=state_obj.pos
+        #neg_list=state_obj.neg
+
+        #Count how many goals are already achieved
+        #We assume that there are only positive goals. Which is the case in the problems given here
+        achieved_goals=0
+        for pos in pos_list:
+            if pos in self.goal:
+                achieved_goals=achieved_goals+1
+        count = len(self.goal)-achieved_goals
         return count
 
 
@@ -228,11 +248,13 @@ def air_cargo_p1() -> AirCargoProblem:
     cargos = ['C1', 'C2']
     planes = ['P1', 'P2']
     airports = ['JFK', 'SFO']
+
     pos = [expr('At(C1, SFO)'),
            expr('At(C2, JFK)'),
            expr('At(P1, SFO)'),
            expr('At(P2, JFK)'),
            ]
+
     neg = [expr('At(C2, SFO)'),
            expr('In(C2, P1)'),
            expr('In(C2, P2)'),
@@ -251,9 +273,94 @@ def air_cargo_p1() -> AirCargoProblem:
 
 def air_cargo_p2() -> AirCargoProblem:
     # TODO implement Problem 2 definition
-    pass
+    cargos = ['C1', 'C2', 'C3']
+    planes = ['P1', 'P2', 'P3']
+    airports = ['JFK', 'SFO', 'ATL']
+    pos = [expr('At(C1, SFO)'),
+           expr('At(C2, JFK)'),
+           expr('At(C3, ATL)'),
+           expr('At(P1, SFO)'),
+           expr('At(P2, JFK)'),
+           expr('At(P3, ATL)'),
+           ]
+
+    neg = []
+
+    for cargo in cargos:
+        for airport in airports:
+            fluent=expr("At({}, {})".format(cargo, airport))
+            if  fluent not in pos:
+                neg.append(fluent)
+        for plane in planes:
+            fluent=expr("In({}, {})".format(cargo, plane))
+            if  fluent not in pos:
+                neg.append(fluent)
+
+    for plane in planes:
+        for airport in airports:
+            fluent=expr("At({}, {})".format(plane, airport))
+            if  fluent not in pos:
+                neg.append(fluent)
+
+    init = FluentState(pos, neg)
+
+    goal = [expr('At(C1, JFK)'),
+            expr('At(C2, SFO)'),
+            expr('At(C3, SFO)'),
+            ]
+
+    if debug>=1:
+        print("air cargo problem 2")
+        print("pos",pos)
+        print("neg",neg)
+
+    return AirCargoProblem(cargos, planes, airports, init, goal)
 
 
 def air_cargo_p3() -> AirCargoProblem:
     # TODO implement Problem 3 definition
-    pass
+    cargos = ['C1', 'C2', 'C3','C4']
+    planes = ['P1', 'P2']
+    airports = ['JFK', 'SFO', 'ATL','ORD']
+    pos = [expr('At(C1, SFO)'),
+           expr('At(C2, JFK)'),
+           expr('At(C3, ATL)'),
+           expr('At(C4, ORD)'),
+           expr('At(P1, SFO)'),
+           expr('At(P2, JFK)')
+           ]
+
+    neg = []
+
+    for cargo in cargos:
+        for airport in airports:
+            fluent=expr("At({}, {})".format(cargo, airport))
+            if  fluent not in pos:
+                neg.append(fluent)
+        for plane in planes:
+            fluent=expr("In({}, {})".format(cargo, plane))
+            if  fluent not in pos:
+                neg.append(fluent)
+
+    for plane in planes:
+        for airport in airports:
+            fluent=expr("At({}, {})".format(plane, airport))
+            if  fluent not in pos:
+                neg.append(fluent)
+
+    init = FluentState(pos, neg)
+
+    goal = [expr('At(C1, JFK)'),
+            expr('At(C2, SFO)'),
+            expr('At(C3, JFK)'),
+            expr('At(C4, SFO)'),
+            ]
+
+    if debug>=1:
+        print("air cargo problem 3")
+        print("pos",pos)
+        print("neg",neg)
+        print("goal", goal)
+
+    return AirCargoProblem(cargos, planes, airports, init, goal)
+
