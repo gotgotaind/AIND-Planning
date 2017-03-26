@@ -307,10 +307,70 @@ class PlanningGraph():
         # TODO add action A level to the planning graph as described in the Russell-Norvig text
         # 1. determine what actions to add and create those PgNode_a objects
         # 2. connect the nodes to the previous S literal level
-        # for example, the A0 level will iterate through all possible actions for the problem and add a PgNode_a to a_levels[0]
-        #   set iff all prerequisite literals for the action hold in S0.  This can be accomplished by testing
-        #   to see if a proposed PgNode_a has prenodes that are a subset of the previous S level.  Once an
-        #   action node is added, it MUST be connected to the S node instances in the appropriate s_level set.
+        # for example, the A0 level will iterate through all possible actions for the problem
+        #  and add a PgNode_a to a_levels[0]
+        #   set iff all prerequisite literals for the action hold in S0.  This can be
+        #  accomplished by testing to see if a proposed PgNode_a has prenodes that are
+        #  a subset of the previous S level.
+        #   Once an action node is added, it MUST be connected to
+        #  the S node instances in the appropriate s_level set.
+
+        #initialize self.a_levels[level] to an empty set
+        self.a_levels.append(set())
+
+        current_PgNode_states=self.s_levels[level]
+        for a in self.all_actions:
+            preconds_neg=a.precond_neg
+            preconds_pos=a.precond_pos
+
+            # initialize dictionaries of preconditions statisfaction with all values set to an empty list
+            preconds_neg_satisfaction=dict.fromkeys(preconds_neg,[])
+            preconds_pos_satisfaction = dict.fromkeys(preconds_pos,[])
+
+            # find which negative precond is in the the previous state and add it to the
+            # precond_neg_statisfactions dictionary
+            for precond in preconds_neg:
+                for pgNode_state in current_PgNode_states:
+                    if (pgNode_state.is_pos==False) and (precond==pgNode_state.literal):
+                        preconds_neg_satisfaction[precond].append(pgNode_state)
+
+
+            # find which positive precond is in the the previous state and add it to the
+            # precond_pos_satisfactions dictionary
+            for precond in preconds_pos:
+                for pgNode_state in current_PgNode_states:
+                    if (pgNode_state.is_pos==True) and (precond==pgNode_state.literal):
+                        preconds_pos_satisfaction[precond].append(pgNode_state)
+
+            # find if all preconds are satisfied
+            are_all_preconds_satisfied=True
+            for precond in preconds_neg:
+                if(len(preconds_neg_satisfaction[precond])==0):
+                    are_all_preconds_satisfied=False
+                    # we can break here. at least one precondition is missing
+                    break
+            for precond in preconds_pos:
+                if(len(preconds_pos_satisfaction[precond])==0):
+                    are_all_preconds_satisfied=False
+                    # we can break here. at least one precondition is missing
+                    break
+
+            # if all preconds are satisfied, add a PgAction_a node, link it to the
+            # satisfied preconds, and add it to the action level set
+            if are_all_preconds_satisfied:
+                pgNode_a=PgNode_a(a)
+                for precond in preconds_neg_satisfaction:
+                    pgNode_a.prenodes.add(precond)
+                for precond in preconds_pos_satisfaction:
+                    pgNode_a.prenodes.add(precond)
+                self.a_levels[level].add(pgNode_a)
+
+
+
+
+
+
+
 
     def add_literal_level(self, level):
         ''' add an S (literal) level to the Planning Graph
