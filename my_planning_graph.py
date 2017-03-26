@@ -320,12 +320,16 @@ class PlanningGraph():
         self.a_levels.append(set())
 
         current_PgNode_states=self.s_levels[level]
+
         for a in self.all_actions:
 
             if debug_add_action>0:
                 print("checking action :",a.name,a.precond_neg,a.precond_pos)
             preconds_neg=a.precond_neg
             preconds_pos=a.precond_pos
+
+            # algorithm can be improved for faster performance by breaking as soon as
+            # it detects that a precondition is not found in current_PgNode_states
 
             # initialize dictionaries of preconditions statisfaction
             preconds_neg_satisfaction=dict()
@@ -475,7 +479,20 @@ class PlanningGraph():
         :return: bool
         '''
         # TODO test for Inconsistent Effects between nodes
-        return False
+
+        inconsistent_effect_detected=False
+        for a1_effect_add in node_a1.action.effect_add:
+            for a2_effect_rem in node_a2.action.effect_rem:
+                if a1_effect_add==a2_effect_rem:
+                    inconsistent_effect_detected=True
+
+        for a2_effect_add in node_a2.action.effect_add:
+            for a1_effect_rem in node_a1.action.effect_rem:
+                if a2_effect_add==a1_effect_rem:
+                    inconsistent_effect_detected=True
+
+
+        return inconsistent_effect_detected
 
     def interference_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
         '''
@@ -492,7 +509,29 @@ class PlanningGraph():
         :return: bool
         '''
         # TODO test for Interference between nodes
-        return False
+        interference_detected=False
+
+        for a1_effect_add in node_a1.action.effect_add:
+            for a2_precond_neg in node_a2.action.precond_neg:
+                if a1_effect_add==a2_precond_neg:
+                    interference_detected=True
+        for a1_effect_rem in node_a1.action.effect_rem:
+            for a2_precond_pos in node_a2.action.precond_pos:
+                if a1_effect_rem==a2_precond_pos:
+                    interference_detected=True
+
+        for a2_effect_add in node_a2.action.effect_add:
+            for a1_precond_neg in node_a1.action.precond_neg:
+                if a2_effect_add==a1_precond_neg:
+                    interference_detected=True
+        for a2_effect_rem in node_a2.action.effect_rem:
+            for a1_precond_pos in node_a1.action.precond_pos:
+                if a2_effect_rem==a1_precond_pos:
+                    interference_detected=True
+
+
+
+        return interference_detected
 
     def competing_needs_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
         '''
@@ -506,7 +545,21 @@ class PlanningGraph():
         '''
 
         # TODO test for Competing Needs between nodes
-        return False
+        is_competing=False
+
+        print("checking ",node_a1.action.name,node_a2.action.name)
+        for a1_precond_pos in node_a1.action.precond_pos:
+            for a2_precond_pos in node_a2.action.precond_pos:
+                print(a1_precond_pos,a2_precond_pos)
+                if a1_precond_pos==a2_precond_pos:
+                    is_competing=True
+        for a1_precond_neg in node_a1.action.precond_neg:
+            for a2_precond_neg in node_a2.action.precond_neg:
+                if a1_precond_neg == a2_precond_neg:
+                    is_competing = True
+
+
+        return is_competing
 
     def update_s_mutex(self, nodeset: set):
         ''' Determine and update sibling mutual exclusion for S-level nodes
