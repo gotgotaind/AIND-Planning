@@ -3,6 +3,7 @@ from aimacode.search import Problem
 from aimacode.utils import expr
 from lp_utils import decode_state
 
+debug_add_action=0
 
 class PgNode():
     ''' Base class for planning graph nodes.
@@ -320,37 +321,42 @@ class PlanningGraph():
 
         current_PgNode_states=self.s_levels[level]
         for a in self.all_actions:
+
+            if debug_add_action>0:
+                print("checking action :",a.name,a.precond_neg,a.precond_pos)
             preconds_neg=a.precond_neg
             preconds_pos=a.precond_pos
 
-            # initialize dictionaries of preconditions statisfaction with all values set to an empty list
-            preconds_neg_satisfaction=dict.fromkeys(preconds_neg,[])
-            preconds_pos_satisfaction = dict.fromkeys(preconds_pos,[])
+            # initialize dictionaries of preconditions statisfaction
+            preconds_neg_satisfaction=dict()
+            preconds_pos_satisfaction = dict()
 
             # find which negative precond is in the the previous state and add it to the
             # precond_neg_statisfactions dictionary
             for precond in preconds_neg:
                 for pgNode_state in current_PgNode_states:
-                    if (pgNode_state.is_pos==False) and (precond==pgNode_state.literal):
-                        preconds_neg_satisfaction[precond].append(pgNode_state)
+                    if debug_add_action > 0:
+                        print("testing neg precond",precond,pgNode_state.is_pos,pgNode_state.literal)
+                    if (pgNode_state.is_pos==False) and (precond==pgNode_state.symbol):
+                        preconds_neg_satisfaction[precond]=pgNode_state
 
 
             # find which positive precond is in the the previous state and add it to the
             # precond_pos_satisfactions dictionary
             for precond in preconds_pos:
                 for pgNode_state in current_PgNode_states:
-                    if (pgNode_state.is_pos==True) and (precond==pgNode_state.literal):
-                        preconds_pos_satisfaction[precond].append(pgNode_state)
+                    if (pgNode_state.is_pos==True) and (precond==pgNode_state.symbol):
+                        preconds_pos_satisfaction[precond]=pgNode_state
 
             # find if all preconds are satisfied
             are_all_preconds_satisfied=True
             for precond in preconds_neg:
-                if(len(preconds_neg_satisfaction[precond])==0):
+                if(precond not in preconds_neg_satisfaction):
                     are_all_preconds_satisfied=False
                     # we can break here. at least one precondition is missing
                     break
             for precond in preconds_pos:
-                if(len(preconds_pos_satisfaction[precond])==0):
+                if(precond not in preconds_pos_satisfaction):
                     are_all_preconds_satisfied=False
                     # we can break here. at least one precondition is missing
                     break
@@ -360,10 +366,15 @@ class PlanningGraph():
             if are_all_preconds_satisfied:
                 pgNode_a=PgNode_a(a)
                 for precond in preconds_neg_satisfaction:
-                    pgNode_a.prenodes.add(precond)
+                    pgNode_a.parents.add(preconds_neg_satisfaction[precond])
+                    preconds_neg_satisfaction[precond].children.add(pgNode_a)
+
                 for precond in preconds_pos_satisfaction:
-                    pgNode_a.prenodes.add(precond)
+                    pgNode_a.parents.add(preconds_pos_satisfaction[precond])
+                    preconds_pos_satisfaction[precond].children.add(pgNode_a)
                 self.a_levels[level].add(pgNode_a)
+                if debug_add_action>0:
+                    print ("{} added to a_levels[{}]".format(a.name,level),a.precond_pos,a.precond_neg)
 
 
 
@@ -389,6 +400,23 @@ class PlanningGraph():
         #   may be "added" to the set without fear of duplication.  However, it is important to then correctly create and connect
         #   all of the new S nodes as children of all the A nodes that could produce them, and likewise add the A nodes to the
         #   parent sets of the S nodes
+
+        #initialize self.s_levels[level] to an empty set
+        self.s_levels.append(set())
+        s_level=self.s_levels[level]
+
+        previous_PgNode_actions=self.a_levels[level-1]
+
+        for a in previous_PgNode_actions:
+            for s in a.effnodes:
+                s_level.add(s)
+                a.children.add(s)
+                s.parents.add(a)
+
+
+
+
+
 
     def update_a_mutex(self, nodeset):
         ''' Determine and update sibling mutual exclusion for A-level nodes
