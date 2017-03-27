@@ -4,6 +4,7 @@ from aimacode.utils import expr
 from lp_utils import decode_state
 
 debug_add_action=0
+debug_level_sum=0
 
 class PgNode():
     ''' Base class for planning graph nodes.
@@ -650,5 +651,6 @@ class PlanningGraph():
             else:
                 level_sum=float('inf')
 
-
+        if debug_level_sum>0:
+            print("level_sum : ",level_sum)
         return level_sum
